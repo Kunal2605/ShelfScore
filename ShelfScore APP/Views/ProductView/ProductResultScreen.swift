@@ -1,0 +1,465 @@
+import SwiftUI
+
+struct ProductResultScreen: View {
+    let product: Product
+
+    @State private var animateScore = false
+    @State private var animateCards = false
+
+    private var gradeColor: Color { product.healthScore.grade.color }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                // Score header
+                scoreHeader
+
+                // Content cards
+                VStack(spacing: 14) {
+                    nutritionCard
+                        .slideUp(delay: 0.05, animate: animateCards)
+
+                    if let nova = product.novaGroup {
+                        novaCard(group: nova)
+                            .slideUp(delay: 0.12, animate: animateCards)
+                    }
+
+                    scoreBreakdownCard
+                        .slideUp(delay: 0.19, animate: animateCards)
+
+                    if !product.additives.isEmpty {
+                        additivesCard
+                            .slideUp(delay: 0.26, animate: animateCards)
+                    }
+
+                    if !product.allergens.isEmpty {
+                        allergensCard
+                            .slideUp(delay: 0.30, animate: animateCards)
+                    }
+
+                    if let ingredients = product.ingredients, !ingredients.isEmpty {
+                        ingredientsCard(ingredients)
+                            .slideUp(delay: 0.34, animate: animateCards)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 40)
+            }
+        }
+        .background(Color(.systemBackground))
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            withAnimation(.spring(response: 0.9, dampingFraction: 0.75).delay(0.2)) {
+                animateScore = true
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.5)) {
+                animateCards = true
+            }
+        }
+    }
+
+    // MARK: - Score Header
+    private var scoreHeader: some View {
+        VStack(spacing: 0) {
+            // Compact colored accent bar at the top
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [gradeColor.opacity(0.15), gradeColor.opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(height: 6)
+
+            VStack(spacing: 16) {
+                // Product info
+                HStack(spacing: 14) {
+                    AsyncImage(url: product.imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 72, height: 72)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .strokeBorder(Color(.systemGray5), lineWidth: 1)
+                                )
+                        case .failure:
+                            productImagePlaceholder()
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 72, height: 72)
+                        @unknown default:
+                            productImagePlaceholder()
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(product.displayName)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .lineLimit(2)
+
+                        if !product.brand.isEmpty {
+                            Text(product.brand)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        HStack(spacing: 6) {
+                            if let quantity = product.quantity, !quantity.isEmpty {
+                                Text(quantity)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Text(product.id)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+
+                // Score gauge with reactive accent ring
+                ZStack {
+                    // Subtle colored glow
+                    Circle()
+                        .fill(gradeColor.opacity(animateScore ? 0.08 : 0))
+                        .frame(width: 200, height: 200)
+                        .blur(radius: 20)
+
+                    ScoreGaugeView(
+                        score: product.healthScore.score,
+                        grade: product.healthScore.grade,
+                        animate: animateScore
+                    )
+                    .frame(width: 180, height: 180)
+                }
+                .padding(.vertical, 4)
+
+                // Grade pill
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(gradeColor)
+                        .frame(width: 8, height: 8)
+
+                    Text(product.healthScore.grade.label)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(gradeColor)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(gradeColor.opacity(0.1))
+                )
+                .padding(.bottom, 12)
+            }
+
+            Divider()
+        }
+        .background(Color(.systemBackground))
+    }
+
+    // MARK: - Nutrition Card
+    private var nutritionCard: some View {
+        SectionCard(title: "Nutrition Facts", icon: "chart.bar.fill", accentColor: .blue) {
+            VStack(spacing: 0) {
+                Text("Per 100g")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.bottom, 8)
+
+                ForEach(Array(product.nutrition.displayRows.enumerated()), id: \.offset) { index, row in
+                    NutrientRowView(
+                        name: row.name,
+                        value: row.value,
+                        level: row.level
+                    )
+
+                    if index < product.nutrition.displayRows.count - 1 {
+                        Divider()
+                            .padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - NOVA Card
+    private func novaCard(group: Int) -> some View {
+        SectionCard(title: "Processing Level", icon: "gearshape.2.fill", accentColor: novaColor(group)) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(novaColor(group).opacity(0.12))
+                        .frame(width: 52, height: 52)
+
+                    Text("\(group)")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(novaColor(group))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(novaLabel(group))
+                        .font(.system(size: 14, weight: .semibold))
+
+                    Text(novaDescription(group))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: - Score Breakdown Card
+    private var scoreBreakdownCard: some View {
+        SectionCard(title: "Score Breakdown", icon: "list.bullet.clipboard.fill", accentColor: gradeColor) {
+            VStack(spacing: 8) {
+                if !product.healthScore.positives.isEmpty {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.system(size: 12))
+                        Text("POSITIVES")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.green)
+                            .tracking(0.5)
+                        Spacer()
+                    }
+
+                    ForEach(product.healthScore.positives) { factor in
+                        factorRow(factor, isPositive: true)
+                    }
+                }
+
+                if !product.healthScore.negatives.isEmpty {
+                    if !product.healthScore.positives.isEmpty {
+                        Divider().padding(.vertical, 4)
+                    }
+
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundStyle(.red)
+                            .font(.system(size: 12))
+                        Text("NEGATIVES")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.red)
+                            .tracking(0.5)
+                        Spacer()
+                    }
+
+                    ForEach(product.healthScore.negatives) { factor in
+                        factorRow(factor, isPositive: false)
+                    }
+                }
+            }
+        }
+    }
+
+    private func factorRow(_ factor: ScoreFactor, isPositive: Bool) -> some View {
+        HStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(isPositive ? Color.green.opacity(0.5) : Color.red.opacity(0.5))
+                .frame(width: 3, height: 24)
+
+            Text(factor.name)
+                .font(.system(size: 13, weight: .medium))
+
+            Spacer()
+
+            Text(factor.detail)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Text(isPositive ? "+\(factor.impact)" : "\(factor.impact)")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(isPositive ? .green : .red)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(
+                    Capsule()
+                        .fill((isPositive ? Color.green : Color.red).opacity(0.08))
+                )
+        }
+    }
+
+    // MARK: - Additives Card
+    private var additivesCard: some View {
+        SectionCard(title: "Additives (\(product.additives.count))", icon: "exclamationmark.triangle.fill", accentColor: .orange) {
+            FlowLayout(spacing: 8) {
+                ForEach(product.additives, id: \.self) { additive in
+                    Text(additive)
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange.opacity(0.08))
+                                .overlay(
+                                    Capsule()
+                                        .strokeBorder(Color.orange.opacity(0.15), lineWidth: 1)
+                                )
+                        )
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    // MARK: - Allergens Card
+    private var allergensCard: some View {
+        SectionCard(title: "Allergens", icon: "exclamationmark.triangle.fill", accentColor: .red) {
+            FlowLayout(spacing: 8) {
+                ForEach(product.allergens, id: \.self) { allergen in
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9))
+                        Text(allergen)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.red.opacity(0.08))
+                            .overlay(
+                                Capsule()
+                                    .strokeBorder(Color.red.opacity(0.15), lineWidth: 1)
+                            )
+                    )
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    // MARK: - Ingredients Card
+    private func ingredientsCard(_ text: String) -> some View {
+        SectionCard(title: "Ingredients", icon: "leaf.fill", accentColor: .green) {
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(2)
+        }
+    }
+
+    // MARK: - Helpers
+    private func novaColor(_ group: Int) -> Color {
+        switch group {
+        case 1: return .green
+        case 2: return .yellow
+        case 3: return .orange
+        case 4: return .red
+        default: return .gray
+        }
+    }
+
+    private func novaLabel(_ group: Int) -> String {
+        switch group {
+        case 1: return "Unprocessed or minimally processed"
+        case 2: return "Processed culinary ingredients"
+        case 3: return "Processed foods"
+        case 4: return "Ultra-processed products"
+        default: return "Unknown processing level"
+        }
+    }
+
+    private func novaDescription(_ group: Int) -> String {
+        switch group {
+        case 1: return "Fresh or minimally processed whole foods like fruits, vegetables, grains, and meat."
+        case 2: return "Ingredients extracted from foods, like oils, butter, sugar, and salt."
+        case 3: return "Foods made by combining group 1 and 2 ingredients, like canned foods and cheeses."
+        case 4: return "Industrial formulations with additives like hydrogenated oils, modified starches, and flavor enhancers."
+        default: return "Processing level unknown."
+        }
+    }
+}
+
+// MARK: - Section Card (Clean White)
+struct SectionCard<Content: View>: View {
+    let title: String
+    let icon: String
+    let accentColor: Color
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(accentColor)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(accentColor.opacity(0.1))
+                    )
+
+                Text(title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color(.systemGray5).opacity(0.5), lineWidth: 0.5)
+        )
+    }
+}
+
+// MARK: - Flow Layout
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        computeLayout(proposal: proposal, subviews: subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = computeLayout(proposal: proposal, subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            lineHeight = max(lineHeight, size.height)
+            currentX += size.width + spacing
+        }
+
+        return (CGSize(width: maxWidth, height: currentY + lineHeight), positions)
+    }
+}
