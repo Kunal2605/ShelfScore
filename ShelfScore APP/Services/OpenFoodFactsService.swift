@@ -1,6 +1,7 @@
 import Foundation
+import SwiftData
 
-/// API client for Open Food Facts
+/// API client for Open Food Facts with local caching
 final class OpenFoodFactsService {
     static let shared = OpenFoodFactsService()
 
@@ -21,8 +22,52 @@ final class OpenFoodFactsService {
         self.session = URLSession(configuration: config)
     }
 
-    /// Fetch product by barcode
+    // MARK: - Cache-Aware Fetch (Primary API)
+
+    /// Fetch product with cache support: API-first, cache fallback.
+    /// - On success: updates the cache and returns the fresh product.
+    /// - On network failure: returns the cached version if available.
+    /// - If neither works: throws the original error.
+    func fetchProduct(barcode: String, modelContext: ModelContext) async throws -> Product {
+        do {
+            // Try API first
+            let product = try await fetchFromAPI(barcode: barcode)
+
+            // Cache the result
+            await MainActor.run {
+                cacheProduct(product, in: modelContext)
+            }
+
+            return product
+
+        } catch {
+            // API failed → try cache
+            let cached: CachedProduct? = await MainActor.run {
+                let descriptor = FetchDescriptor<CachedProduct>(
+                    predicate: #Predicate { $0.barcode == barcode }
+                )
+                return try? modelContext.fetch(descriptor).first
+            }
+
+            if let cached = cached {
+                return cached.toProduct()
+            }
+
+            // Neither API nor cache → rethrow
+            throw error
+        }
+    }
+
+    // MARK: - Direct API Fetch (No Cache)
+
+    /// Fetch product directly from the API without cache interaction.
     func fetchProduct(barcode: String) async throws -> Product {
+        try await fetchFromAPI(barcode: barcode)
+    }
+
+    // MARK: - Private
+
+    private func fetchFromAPI(barcode: String) async throws -> Product {
         let urlString = "\(baseURL)/\(barcode).json?fields=\(requestedFields)"
         guard let url = URL(string: urlString) else {
             throw ShelfScoreError.invalidBarcode
@@ -59,6 +104,23 @@ final class OpenFoodFactsService {
         }
 
         return product
+    }
+
+    /// Save or update cached product data
+    private func cacheProduct(_ product: Product, in modelContext: ModelContext) {
+        let barcode = product.id
+        let descriptor = FetchDescriptor<CachedProduct>(
+            predicate: #Predicate { $0.barcode == barcode }
+        )
+
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.update(from: product)
+        } else {
+            let cached = CachedProduct(from: product)
+            modelContext.insert(cached)
+        }
+
+        try? modelContext.save()
     }
 }
 

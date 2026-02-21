@@ -11,7 +11,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		ADEE9A602F496E4B00CEF622 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		ADEE9A602F496E4B00CEF622 /* Exceptions for "ShelfScore APP" folder in "ShelfScore APP" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -24,7 +24,7 @@
 		ADEE9A502F496E4900CEF622 /* ShelfScore APP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				ADEE9A602F496E4B00CEF622 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				ADEE9A602F496E4B00CEF622 /* Exceptions for "ShelfScore APP" folder in "ShelfScore APP" target */,
 			);
 			path = "ShelfScore APP";
 			sourceTree = "<group>";

@@ -16,20 +16,24 @@ ShelfScore is an iOS app that helps you make healthier grocery choices by scanni
 - **⚙️ NOVA Processing Level** — Shows how processed a product is (Groups 1–4)
 - **⚠️ Additives & Allergens** — Lists additives and allergen warnings
 - **📋 Scan History** — All scanned products saved locally with SwiftData for quick reference
+- **📶 Offline Caching** — Previously scanned products available with full nutrition data even without internet
+- **🎬 Animated Splash Screen** — Premium branded launch animation
 
 ## 🏗️ Architecture
 
 ```
 ShelfScore APP/
-├── ShelfScore_APPApp.swift          # App entry point + root ContentView
+├── ShelfScore_APPApp.swift          # App entry point + splash → main transition
 ├── Models/
 │   ├── Product.swift                # Domain model + API response mapping
 │   ├── NutritionFacts.swift         # Nutrition data with nutrient-level ratings
-│   └── HealthScore.swift            # Score model with A–E grading
+│   ├── HealthScore.swift            # Score model with A–E grading
+│   └── CachedProduct.swift          # SwiftData model for offline product cache
 ├── Services/
-│   ├── OpenFoodFactsService.swift   # API client for Open Food Facts
+│   ├── OpenFoodFactsService.swift   # API client with cache-aware fetching
 │   └── HealthScoreCalculator.swift  # Nutri-Score 2023 based scoring algorithm
 ├── Views/
+│   ├── SplashScreen.swift           # Animated launch screen
 │   ├── ScannerView/
 │   │   ├── ScannerScreen.swift      # Main scanner UI with overlay
 │   │   └── BarcodeScannerView.swift # AVFoundation camera integration
@@ -64,6 +68,21 @@ The score is **calculated locally** from nutrition data fetched via the [Open Fo
 
 **Final Score** = `100 − (rawNutriScore × 1.39) + modifiers`, clamped to 0–100.
 
+## 📶 Offline Caching
+
+ShelfScore uses an **API-first, cache-fallback** strategy so previously scanned products are always available — even without internet.
+
+**How it works:**
+
+1. **You scan a barcode** → the app fetches fresh data from the Open Food Facts API
+2. **On success** → the full product (nutrition, allergens, additives, image URL, etc.) is saved to a local `CachedProduct` store via SwiftData
+3. **On network failure** → the app checks the local cache for that barcode and serves the cached version
+4. **If neither works** → an error is shown
+
+**What's cached:** All nutrition values, allergens, additives, NOVA group, Nutri-Score grade, ingredients, image URL, and product metadata. The health score is recalculated from cached nutrition data, so it always reflects the latest algorithm.
+
+**What requires internet:** Scanning a product for the **first time** (it must be fetched from Open Food Facts at least once). Product images also require a connection to display since only the URL is cached, not the image data itself.
+
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
@@ -71,6 +90,7 @@ The score is **calculated locally** from nutrition data fetched via the [Open Fo
 | UI | SwiftUI |
 | Camera | AVFoundation |
 | Persistence | SwiftData |
+| Caching | SwiftData (CachedProduct) |
 | API | Open Food Facts (REST) |
 | Scoring | Nutri-Score 2023 (adapted) |
 | Min Target | iOS 17+ |

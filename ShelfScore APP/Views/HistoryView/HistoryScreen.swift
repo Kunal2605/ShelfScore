@@ -150,14 +150,17 @@ struct HistoryScreen: View {
     }
 
     private func loadAndShow(_ scanned: ScannedProduct) {
+        let context = modelContext
         Task {
             do {
-                let product = try await OpenFoodFactsService.shared.fetchProduct(barcode: scanned.barcode)
+                let product = try await OpenFoodFactsService.shared.fetchProduct(barcode: scanned.barcode, modelContext: context)
                 await MainActor.run {
                     selectedProduct = product
                     showResult = true
                 }
             } catch {
+                // Cache-aware fetch already tried the cache.
+                // If we still failed, show a minimal fallback.
                 let nutrition = NutritionFacts(
                     calories: 0, fat: 0, saturatedFat: 0, carbohydrates: 0,
                     sugars: 0, fiber: 0, proteins: 0, salt: 0, sodium: 0

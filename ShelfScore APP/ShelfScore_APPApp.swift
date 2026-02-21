@@ -5,12 +5,37 @@ import SwiftData
 struct ShelfScoreApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
-        .modelContainer(for: ScannedProduct.self)
+        .modelContainer(for: [ScannedProduct.self, CachedProduct.self])
     }
 }
 
+// MARK: - Root View (Splash → Main)
+struct RootView: View {
+    @State private var showSplash = true
+
+    var body: some View {
+        ZStack {
+            ContentView()
+                .opacity(showSplash ? 0 : 1)
+
+            if showSplash {
+                SplashScreen()
+                    .transition(.opacity)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    showSplash = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Main Content
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
 

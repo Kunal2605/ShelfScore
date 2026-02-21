@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ScannerScreen: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var scannedBarcode: String?
     @State private var product: Product?
     @State private var isLoading = false
@@ -307,9 +308,10 @@ struct ScannerScreen: View {
         isLoading = true
         errorMessage = nil
 
+        let context = modelContext
         Task {
             do {
-                let fetchedProduct = try await OpenFoodFactsService.shared.fetchProduct(barcode: barcode)
+                let fetchedProduct = try await OpenFoodFactsService.shared.fetchProduct(barcode: barcode, modelContext: context)
                 await MainActor.run {
                     self.product = fetchedProduct
                     self.isLoading = false
