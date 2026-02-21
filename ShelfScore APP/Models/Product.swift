@@ -13,7 +13,21 @@ struct OFFResponse: Codable {
     }
 }
 
+// MARK: - Open Food Facts Search Response
+struct OFFSearchResponse: Codable {
+    let products: [OFFProduct]?
+    let count: Int?
+    let page: Int?
+    let pageSize: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case products, count, page
+        case pageSize = "page_size"
+    }
+}
+
 struct OFFProduct: Codable {
+    let code: String?
     let productName: String?
     let brands: String?
     let imageFrontURL: String?
@@ -28,6 +42,7 @@ struct OFFProduct: Codable {
     let nutriscoreScore: Int?
 
     enum CodingKeys: String, CodingKey {
+        case code
         case productName = "product_name"
         case brands
         case imageFrontURL = "image_front_url"

@@ -54,6 +54,7 @@ struct ContentView: View {
                 }
         }
         .tint(.green)
+        .preferredColorScheme(.light)
     }
 
     private func saveProduct(_ product: Product) {

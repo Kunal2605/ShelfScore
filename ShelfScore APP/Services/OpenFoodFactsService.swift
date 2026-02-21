@@ -65,6 +65,72 @@ final class OpenFoodFactsService {
         try await fetchFromAPI(barcode: barcode)
     }
 
+    // MARK: - Search Alternatives
+
+    /// Search for healthier products in the same category.
+    /// Returns up to `limit` products that score higher than the given product.
+    func searchAlternatives(for product: Product, limit: Int = 5) async -> [Product] {
+        guard let categories = product.categories, !categories.isEmpty else {
+            return []
+        }
+
+        // Prefer the first (most general) category for broader search results
+        let categoryList = categories.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard let primaryCategory = categoryList.first, !primaryCategory.isEmpty else {
+            return []
+        }
+
+        if product.healthScore.grade == .a { return [] } // Already the best
+
+        // Build search URL — use categories_tags which accepts the full en: prefix
+        let encodedCategory = primaryCategory.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? primaryCategory
+        let searchURL = "https://world.openfoodfacts.org/api/v2/search"
+            + "?categories_tags=\(encodedCategory)"
+            + "&countries_tags=en:united-states"
+            + "&page_size=20"
+            + "&fields=code,\(requestedFields)"
+
+        guard let url = URL(string: searchURL) else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue(
+            "ShelfScore iOS/1.0 (kunalsarna; contact@shelfscore.app)",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.timeoutInterval = 10
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else { return [] }
+
+            let decoder = JSONDecoder()
+            let searchResponse = try decoder.decode(OFFSearchResponse.self, from: data)
+
+            guard let offProducts = searchResponse.products else { return [] }
+
+            // Convert to domain products, filter to better scores, limit results
+            let alternatives = offProducts.compactMap { offProduct -> Product? in
+                // Build a minimal OFFResponse to reuse the existing converter
+                let fakeResponse = OFFResponse(
+                    code: offProduct.code,
+                    product: offProduct,
+                    status: 1,
+                    statusVerbose: "product found"
+                )
+                return Product.from(offResponse: fakeResponse)
+            }
+            .filter { $0.id != product.id } // Exclude the original product
+            .filter { $0.healthScore.score > product.healthScore.score } // Must be better
+            .sorted { $0.healthScore.score > $1.healthScore.score } // Best first
+            .prefix(limit)
+
+            return Array(alternatives)
+        } catch {
+            return [] // Silently fail — alternatives are non-critical
+        }
+    }
+
     // MARK: - Private
 
     private func fetchFromAPI(barcode: String) async throws -> Product {

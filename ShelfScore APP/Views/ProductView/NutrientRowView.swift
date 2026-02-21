@@ -22,18 +22,18 @@ struct NutrientRowView: View {
 
             // Level badge
             Text(level.rawValue)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 11, weight: .bold))
                 .textCase(.uppercase)
                 .tracking(0.3)
                 .foregroundStyle(levelColor)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
                 .background(
                     Capsule()
                         .fill(levelColor.opacity(0.1))
                 )
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 5)
     }
 
     private var levelColor: Color {

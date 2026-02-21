@@ -97,7 +97,7 @@ struct HistoryScreen: View {
                         .foregroundStyle(grade.color)
 
                     Text("\(scanned.score)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(grade.color.opacity(0.7))
                 }
             }
@@ -133,8 +133,8 @@ struct HistoryScreen: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
