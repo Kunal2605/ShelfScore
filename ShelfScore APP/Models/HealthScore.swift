@@ -36,11 +36,11 @@ struct HealthScore {
 
         static func from(score: Int) -> Grade {
             switch score {
-            case 80...100: return .a
-            case 60..<80: return .b
-            case 40..<60: return .c
-            case 20..<40: return .d
-            default: return .e
+            case 80...100: return .a  // Excellent  — genuinely healthy
+            case 65..<80:  return .b  // Good       — above average (raised from 60)
+            case 45..<65:  return .c  // Average    — mixed nutritional profile
+            case 22..<45:  return .d  // Poor       — significant concerns
+            default:       return .e  // Bad        — avoid or limit
             }
         }
     }
