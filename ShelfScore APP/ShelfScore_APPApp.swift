@@ -3,11 +3,34 @@ import SwiftData
 
 @main
 struct ShelfScoreApp: App {
+    let container: ModelContainer
+
+    init() {
+        let schema = Schema([ScannedProduct.self, CachedProduct.self, GroceryItem.self])
+        do {
+            container = try ModelContainer(for: schema)
+        } catch {
+            // Schema migration failed — wipe the store and start fresh.
+            // This is safe in development; all scan history will be lost once
+            // but the app will launch correctly on every subsequent run.
+            let supportDir = FileManager.default.urls(
+                for: .applicationSupportDirectory, in: .userDomainMask
+            ).first!
+            for ext in ["", ".shm", ".wal"] {
+                try? FileManager.default.removeItem(
+                    at: supportDir.appendingPathComponent("default.store\(ext)")
+                )
+            }
+            // Re-create with a blank database
+            container = try! ModelContainer(for: schema)
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
         }
-        .modelContainer(for: [ScannedProduct.self, CachedProduct.self])
+        .modelContainer(container)
     }
 }
 
@@ -47,6 +70,16 @@ struct ContentView: View {
             .tabItem {
                 Label("Scan", systemImage: "barcode.viewfinder")
             }
+
+            SearchScreen()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+
+            GroceryListScreen()
+                .tabItem {
+                    Label("Grocery List", systemImage: "cart.fill")
+                }
 
             HistoryScreen()
                 .tabItem {

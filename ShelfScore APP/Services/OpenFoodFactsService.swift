@@ -65,6 +65,48 @@ final class OpenFoodFactsService {
         try await fetchFromAPI(barcode: barcode)
     }
 
+    // MARK: - Product Search
+
+    /// Search for products by name globally.
+    func searchProducts(query: String, limit: Int = 20) async -> [Product] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
+
+        var components = URLComponents(string: "https://world.openfoodfacts.org/api/v2/search")!
+        components.queryItems = [
+            URLQueryItem(name: "search_terms", value: trimmed),
+            URLQueryItem(name: "sort_by", value: "unique_scans_n"),
+            URLQueryItem(name: "page_size", value: "\(limit)"),
+            URLQueryItem(name: "fields", value: "code,\(requestedFields)")
+        ]
+
+        guard let url = components.url else { return [] }
+
+        var request = URLRequest(url: url)
+        request.setValue(
+            "ShelfScore iOS/1.0 (kunalsarna; contact@shelfscore.app)",
+            forHTTPHeaderField: "User-Agent"
+        )
+        request.timeoutInterval = 15
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return [] }
+            let decoded = try JSONDecoder().decode(OFFSearchResponse.self, from: data)
+            return (decoded.products ?? []).compactMap { offProduct -> Product? in
+                guard offProduct.productName?.isEmpty == false || offProduct.brands?.isEmpty == false else { return nil }
+                return Product.from(offResponse: OFFResponse(
+                    code: offProduct.code,
+                    product: offProduct,
+                    status: 1,
+                    statusVerbose: "product found"
+                ))
+            }
+        } catch {
+            return []
+        }
+    }
+
     // MARK: - Search Alternatives
 
     /// Search for healthier products in the same category.
@@ -82,15 +124,16 @@ final class OpenFoodFactsService {
 
         if product.healthScore.grade == .a { return [] } // Already the best
 
-        // Build search URL — use categories_tags which accepts the full en: prefix
-        let encodedCategory = primaryCategory.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? primaryCategory
-        let searchURL = "https://world.openfoodfacts.org/api/v2/search"
-            + "?categories_tags=\(encodedCategory)"
-            + "&countries_tags=en:united-states"
-            + "&page_size=20"
-            + "&fields=code,\(requestedFields)"
+        // Build search URL using URLComponents for correct percent-encoding
+        var components = URLComponents(string: "https://world.openfoodfacts.org/api/v2/search")!
+        components.queryItems = [
+            URLQueryItem(name: "categories_tags", value: primaryCategory),
+            URLQueryItem(name: "countries_tags", value: "en:united-states"),
+            URLQueryItem(name: "page_size", value: "20"),
+            URLQueryItem(name: "fields", value: "code,\(requestedFields)")
+        ]
 
-        guard let url = URL(string: searchURL) else { return [] }
+        guard let url = components.url else { return [] }
 
         var request = URLRequest(url: url)
         request.setValue(

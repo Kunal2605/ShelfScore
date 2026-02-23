@@ -1,13 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct ProductResultScreen: View {
     let product: Product
+
+    @Environment(\.modelContext) private var modelContext
 
     @State private var animateScore = false
     @State private var animateCards = false
     @State private var alternatives: [Product] = []
     @State private var isLoadingAlternatives = false
     @State private var selectedAlternative: Product?
+    @State private var addedToGroceryList = false
 
     private var gradeColor: Color { product.healthScore.grade.color }
 
@@ -57,6 +61,21 @@ struct ProductResultScreen: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    guard !addedToGroceryList else { return }
+                    let item = GroceryItem(from: product)
+                    modelContext.insert(item)
+                    try? modelContext.save()
+                    addedToGroceryList = true
+                } label: {
+                    Image(systemName: addedToGroceryList ? "cart.fill.badge.plus" : "cart.badge.plus")
+                        .foregroundStyle(addedToGroceryList ? .green : .primary)
+                        .animation(.spring(response: 0.3), value: addedToGroceryList)
+                }
+            }
+        }
         .sheet(item: $selectedAlternative) { alt in
             NavigationStack {
                 ProductResultScreen(product: alt)
