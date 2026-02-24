@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 struct ProductResultScreen: View {
     let product: Product
@@ -12,8 +15,20 @@ struct ProductResultScreen: View {
     @State private var isLoadingAlternatives = false
     @State private var selectedAlternative: Product?
     @State private var addedToGroceryList = false
+    @State private var productInsight: ProductInsight?
+    @State private var isLoadingInsight = false
+    private let llamaService = LlamaAdvisorService.shared
 
     private var gradeColor: Color { product.healthScore.grade.color }
+
+    private var foundationModelsAvailable: Bool {
+        #if canImport(FoundationModels)
+        if #available(iOS 26, *) {
+            return SystemLanguageModel.default.availability == .available
+        }
+        #endif
+        return false
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -33,6 +48,9 @@ struct ProductResultScreen: View {
 
                     scoreBreakdownCard
                         .slideUp(delay: 0.19, animate: animateCards)
+
+                    aiInsightCard
+                        .slideUp(delay: 0.24, animate: animateCards)
 
                     if !product.additives.isEmpty {
                         additivesCard
@@ -76,6 +94,16 @@ struct ProductResultScreen: View {
                 }
             }
         }
+        .onChange(of: llamaService.isModelLoaded) { _, isLoaded in
+            // When the llama model finishes loading (post-download),
+            // upgrade from rule-based to on-device LLM insight automatically.
+            guard isLoaded, productInsight?.source == .ruleBased else { return }
+            Task {
+                if let upgraded = await LlamaAdvisorService.shared.getInsight(for: product) {
+                    await MainActor.run { productInsight = upgraded }
+                }
+            }
+        }
         .sheet(item: $selectedAlternative) { alt in
             NavigationStack {
                 ProductResultScreen(product: alt)
@@ -95,11 +123,19 @@ struct ProductResultScreen: View {
                 animateCards = true
             }
             isLoadingAlternatives = true
+            isLoadingInsight = true
             Task {
                 let results = await OpenFoodFactsService.shared.searchAlternatives(for: product)
                 await MainActor.run {
                     alternatives = results
                     isLoadingAlternatives = false
+                }
+            }
+            Task {
+                let insight = await AIAdvisorService.shared.getProductInsight(for: product)
+                await MainActor.run {
+                    productInsight = insight
+                    isLoadingInsight = false
                 }
             }
         }
@@ -447,6 +483,166 @@ struct ProductResultScreen: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color(.systemGray5).opacity(0.8), lineWidth: 0.5)
         )
+    }
+
+    // MARK: - AI Insight Card
+
+    private var aiInsightCard: some View {
+        SectionCard(title: "AI Insight", icon: "sparkles", accentColor: .purple) {
+            VStack(alignment: .leading, spacing: 12) {
+
+                // 1. Loading spinner (initial fetch)
+                if isLoadingInsight {
+                    HStack(spacing: 10) {
+                        ProgressView().scaleEffect(0.85)
+                        Text("Analysing product…")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+
+                // 2. Insight content
+                } else if let insight = productInsight {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(insight.summary)
+                            .font(.system(size: 14))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineSpacing(2)
+
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.yellow)
+                                .padding(.top, 1)
+                            Text(insight.tip)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        HStack(spacing: 4) {
+                            Image(systemName: insight.badgeIcon)
+                                .font(.system(size: 9))
+                            Text(insight.badgeLabel)
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundStyle(.purple.opacity(0.7))
+                    }
+
+                    // 3. Generating spinner — model is loaded and running inference
+                    if insight.source == .ruleBased && llamaService.isModelLoaded && llamaService.isGeneratingInsight {
+                        Divider()
+                        HStack(spacing: 8) {
+                            ProgressView().scaleEffect(0.75)
+                            Text("Generating AI insight… this may take a minute")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+
+                    // 4. Download / error prompt — model not yet ready
+                    } else if insight.source == .ruleBased && !foundationModelsAvailable && !llamaService.isGeneratingInsight {
+                        Divider()
+                        llamaDownloadSection
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Llama Download Section
+
+    @ViewBuilder
+    private var llamaDownloadSection: some View {
+        if llamaService.isDownloading {
+            // Progress bar
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Downloading AI Model…")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.purple)
+                    Spacer()
+                    Text("\(Int(llamaService.downloadProgress * 100))%")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.purple)
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.purple.opacity(0.12))
+                            .frame(height: 6)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.purple)
+                            .frame(width: geo.size.width * llamaService.downloadProgress, height: 6)
+                            .animation(.linear(duration: 0.3), value: llamaService.downloadProgress)
+                    }
+                }
+                .frame(height: 6)
+                Text("~986 MB · Keep the app open")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+        } else if llamaService.loadFailed {
+            // Model file couldn't be loaded (corrupt download or low memory)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Failed to load AI model.")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red)
+                Text("The file may be corrupted. Delete and re-download.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+        } else if llamaService.isModelDownloaded && !llamaService.isModelLoaded {
+            // Model downloaded, loading into memory
+            HStack(spacing: 8) {
+                ProgressView().scaleEffect(0.75)
+                Text("Loading AI model into memory…")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+        } else if !llamaService.isModelDownloaded {
+            // Offer download
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.purple)
+                    Text("Enhance with On-Device AI")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.purple)
+                }
+                Text("Download a 1 GB model once for smarter, personalised insights on every scan — fully offline, no API needed.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let err = llamaService.downloadError {
+                    Text(err)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
+                }
+
+                Button {
+                    Task { await LlamaAdvisorService.shared.downloadModel() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Download · ~1 GB")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.purple))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Helpers

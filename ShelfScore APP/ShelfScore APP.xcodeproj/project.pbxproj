@@ -6,26 +6,17 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		ADEE9B3E2F4D8C0F00CEF622 /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = ADEE9B3D2F4D8C0F00CEF622 /* LLM */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShelfScore APP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		ADEE9A602F496E4B00CEF622 /* Exceptions for "ShelfScore APP" folder in "ShelfScore APP" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = ADEE9A4D2F496E4900CEF622 /* ShelfScore APP */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		ADEE9A502F496E4900CEF622 /* ShelfScore APP */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				ADEE9A602F496E4B00CEF622 /* Exceptions for "ShelfScore APP" folder in "ShelfScore APP" target */,
-			);
 			path = "ShelfScore APP";
 			sourceTree = "<group>";
 		};
@@ -36,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ADEE9B3E2F4D8C0F00CEF622 /* LLM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +70,7 @@
 			);
 			name = "ShelfScore APP";
 			packageProductDependencies = (
+				ADEE9B3D2F4D8C0F00CEF622 /* LLM */,
 			);
 			productName = "ShelfScore APP";
 			productReference = ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */;
@@ -107,6 +100,9 @@
 			);
 			mainGroup = ADEE9A452F496E4900CEF622;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ADEE9B3C2F4D8C0F00CEF622 /* XCRemoteSwiftPackageReference "LLM" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ADEE9A4F2F496E4900CEF622 /* Products */;
 			projectDirPath = "";
@@ -351,6 +347,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		ADEE9B3C2F4D8C0F00CEF622 /* XCRemoteSwiftPackageReference "LLM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ADEE9B3D2F4D8C0F00CEF622 /* LLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ADEE9B3C2F4D8C0F00CEF622 /* XCRemoteSwiftPackageReference "LLM" */;
+			productName = LLM;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ADEE9A462F496E4900CEF622 /* Project object */;
 }

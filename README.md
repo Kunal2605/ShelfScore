@@ -19,6 +19,7 @@ ShelfScore is an iOS app that helps you make healthier grocery choices by scanni
 - **📶 Offline Caching** — Previously scanned products available with full nutrition data even without internet
 - **🛒 Grocery List** — Add products by barcode/search or type custom items; track what you've bought
 - **🍽️ Recipe Browser** — Browse popular recipes or search by name; view macros and add ingredients directly to your grocery list
+- **🧠 On-Device AI Insights** — Optional ~1 GB model runs fully offline on your device; generates personalised explanations and shopping tips for every product scan
 - **🎬 Animated Splash Screen** — Premium branded launch animation
 
 ---
@@ -39,6 +40,8 @@ ShelfScore APP/
 ├── Services/
 │   ├── OpenFoodFactsService.swift   # API client with cache-aware fetching
 │   ├── SpoonacularService.swift     # Recipe API client (search, popular, detail)
+│   ├── AIAdvisorService.swift       # Orchestrates AI insight priority (Apple Intelligence → llama.cpp → rule-based)
+│   ├── LlamaAdvisorService.swift    # On-device LLM via llama.cpp (LLM.swift); manages download + inference
 │   └── HealthScoreCalculator.swift  # Nutri-Score 2023 based scoring algorithm
 ├── Views/
 │   ├── SplashScreen.swift           # Animated launch screen
@@ -69,6 +72,34 @@ ShelfScore APP/
 └── Utilities/
     └── Extensions.swift             # Color, View, and Date helpers
 ```
+
+---
+
+## 🧠 On-Device AI Insights
+
+Every product scan shows an **AI Insight card** with a personalised explanation of the health score and one actionable shopping tip. The feature uses a three-tier priority system so it always works — even without internet or Apple Intelligence:
+
+| Priority | Source | Requirement |
+|---|---|---|
+| 1 | **Apple Intelligence** | iOS 26+, Apple Intelligence enabled |
+| 2 | **On-Device LLM** (llama.cpp) | One-time ~1 GB model download |
+| 3 | **Rule-Based** | Always available, no download needed |
+
+**Model:** Qwen2.5-1.5B-Instruct Q4_K_M (~986 MB), served via [LLM.swift](https://github.com/eastriverlee/LLM.swift) (llama.cpp wrapper). Runs fully offline after download — no API key, no server.
+
+**How to enable the LLM:**
+1. Scan any product to open the product detail screen
+2. In the **AI Insight** card, tap **Download · ~1 GB**
+3. Keep the app open while downloading (~986 MB)
+4. Once downloaded, the model loads automatically and upgrades the insight from rule-based to on-device AI on every future scan
+
+> **Note:** Inference can take 10–60 seconds depending on your device. A spinner is shown while the model is generating. The rule-based insight is always shown first as an instant fallback.
+
+**Adding LLM.swift via Xcode:**
+1. Open `ShelfScore APP.xcodeproj`
+2. Go to **File → Add Package Dependencies**
+3. Enter: `https://github.com/eastriverlee/LLM.swift`
+4. Add the package to the `ShelfScore APP` target
 
 ---
 
@@ -131,6 +162,8 @@ ShelfScore uses an **API-first, cache-fallback** strategy so previously scanned 
 | Caching | SwiftData (CachedProduct) |
 | Product API | Open Food Facts (REST, free) |
 | Recipe API | Spoonacular (REST, free tier) |
+| On-Device AI | LLM.swift (llama.cpp) + Apple Foundation Models (iOS 26+) |
+| AI Model | Qwen2.5-1.5B-Instruct Q4_K_M (~986 MB GGUF) |
 | Scoring | Nutri-Score 2023 (adapted) |
 | Min Target | iOS 17+ |
 
@@ -159,7 +192,18 @@ enum Secrets {
 
 > **Note:** `Secrets.swift` is listed in `.gitignore`. Never commit your API key to a public repository.
 
-### 3. Build & Run
+### 3. Add LLM.swift Package (for On-Device AI)
+
+The on-device AI feature requires the LLM.swift Swift Package:
+
+1. Open `ShelfScore APP.xcodeproj` in Xcode
+2. Go to **File → Add Package Dependencies**
+3. Enter the URL: `https://github.com/eastriverlee/LLM.swift`
+4. Click **Add Package** and add it to the `ShelfScore APP` target
+
+> **Note:** If you skip this step, the app will still work — the AI Insight card will use the rule-based fallback instead.
+
+### 4. Build & Run
 
 1. Open `ShelfScore APP.xcodeproj` in Xcode
 2. Select your target device or simulator

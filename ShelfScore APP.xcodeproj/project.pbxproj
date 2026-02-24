@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		ADEE9B3B2F4D8A5400CEF622 /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = ADEE9B3A2F4D8A5400CEF622 /* LLM */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShelfScore APP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ADEE9B2F2F4D1FB100CEF622 /* ShelfScore APP.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "ShelfScore APP.xcodeproj"; sourceTree = "<group>"; };
@@ -37,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ADEE9B3B2F4D8A5400CEF622 /* LLM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -86,6 +91,7 @@
 			);
 			name = "ShelfScore APP";
 			packageProductDependencies = (
+				ADEE9B3A2F4D8A5400CEF622 /* LLM */,
 			);
 			productName = "ShelfScore APP";
 			productReference = ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */;
@@ -115,6 +121,9 @@
 			);
 			mainGroup = ADEE9A452F496E4900CEF622;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				ADEE9B392F4D8A5400CEF622 /* XCRemoteSwiftPackageReference "LLM" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ADEE9A4F2F496E4900CEF622 /* Products */;
 			projectDirPath = "";
@@ -365,6 +374,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		ADEE9B392F4D8A5400CEF622 /* XCRemoteSwiftPackageReference "LLM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		ADEE9B3A2F4D8A5400CEF622 /* LLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ADEE9B392F4D8A5400CEF622 /* XCRemoteSwiftPackageReference "LLM" */;
+			productName = LLM;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ADEE9A462F496E4900CEF622 /* Project object */;
 }
