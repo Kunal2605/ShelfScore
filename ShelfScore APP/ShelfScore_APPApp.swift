@@ -76,6 +76,11 @@ struct ContentView: View {
                     Label("Search", systemImage: "magnifyingglass")
                 }
 
+            RecipeListScreen()
+                .tabItem {
+                    Label("Recipes", systemImage: "fork.knife")
+                }
+
             GroceryListScreen()
                 .tabItem {
                     Label("Grocery List", systemImage: "cart.fill")

@@ -42,15 +42,15 @@ final class OpenFoodFactsService {
 
         } catch {
             // API failed → try cache
-            let cached: CachedProduct? = await MainActor.run {
+            let cached: Product? = await MainActor.run {
                 let descriptor = FetchDescriptor<CachedProduct>(
                     predicate: #Predicate { $0.barcode == barcode }
                 )
-                return try? modelContext.fetch(descriptor).first
+                return try? modelContext.fetch(descriptor).first?.toProduct()
             }
 
             if let cached = cached {
-                return cached.toProduct()
+                return cached
             }
 
             // Neither API nor cache → rethrow

@@ -8,7 +8,6 @@
 
 /* Begin PBXFileReference section */
 		ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShelfScore APP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		ADEE9B2F2F4D1FB100CEF622 /* ShelfScore APP.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = "ShelfScore APP.xcodeproj"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -55,13 +54,6 @@
 			isa = PBXGroup;
 			children = (
 				ADEE9A4E2F496E4900CEF622 /* ShelfScore APP.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		ADEE9B302F4D1FB100CEF622 /* Products */ = {
-			isa = PBXGroup;
-			children = (
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -118,12 +110,6 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ADEE9A4F2F496E4900CEF622 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = ADEE9B302F4D1FB100CEF622 /* Products */;
-					ProjectRef = ADEE9B2F2F4D1FB100CEF622 /* ShelfScore APP.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				ADEE9A4D2F496E4900CEF622 /* ShelfScore APP */,
